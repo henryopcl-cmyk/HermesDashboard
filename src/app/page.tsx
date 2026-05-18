@@ -1,65 +1,197 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import { Agent, SystemMetrics, LogEntry } from "@/lib/types";
+import { StatusBadge } from "@/components/StatusBadge";
+import Link from "next/link";
+
+export default function MissionControl() {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+
+  useEffect(() => {
+    fetch("/api/agents")
+      .then((r) => r.json())
+      .then(setAgents);
+    fetch("/api/metrics")
+      .then((r) => r.json())
+      .then(setMetrics);
+    fetch("/api/logs")
+      .then((r) => r.json())
+      .then((data: LogEntry[]) => setLogs(data.slice(0, 15)));
+  }, []);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-white">Mission Control</h1>
+        <p className="text-sm text-muted mt-1">
+          Monitoreo en tiempo real de los agentes Hermes
+        </p>
+      </div>
+
+      {/* Metrics Grid */}
+      {metrics && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <MetricCard
+            label="Agentes Online"
+            value={`${metrics.onlineAgents}/${metrics.totalAgents}`}
+            color="text-success"
+          />
+          <MetricCard
+            label="Tareas Hoy"
+            value={metrics.totalTasksToday.toString()}
+            color="text-accent"
+          />
+          <MetricCard
+            label="Tiempo Resp."
+            value={`${metrics.avgResponseTime}ms`}
+            color="text-warning"
+          />
+          <MetricCard
+            label="Req/min"
+            value={metrics.requestsPerMinute.toString()}
+            color="text-foreground"
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      )}
+
+      {/* System Resources */}
+      {metrics && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <ResourceBar label="CPU" value={metrics.cpuUsage} />
+          <ResourceBar label="Memoria" value={metrics.memoryUsage} />
+          <div className="bg-card border border-card-border rounded-xl p-4">
+            <p className="text-xs text-muted mb-1">Uptime del Servidor</p>
+            <p className="text-lg font-mono text-white">{metrics.uptime}</p>
+          </div>
         </div>
-      </main>
+      )}
+
+      {/* Agents Grid + Activity */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Agents */}
+        <div className="xl:col-span-2 space-y-3">
+          <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+            Agentes
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {agents.map((agent) => (
+              <Link key={agent.id} href={`/agents/${agent.id}`}>
+                <div className="bg-card border border-card-border rounded-xl p-4 hover:border-accent/40 transition-colors cursor-pointer group">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-semibold text-white group-hover:text-accent transition-colors">
+                        {agent.name}
+                      </h3>
+                      <p className="text-xs text-muted">{agent.role}</p>
+                    </div>
+                    <StatusBadge status={agent.status} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-lg font-mono text-white">
+                        {agent.tasksRunning}
+                      </p>
+                      <p className="text-[10px] text-muted">Activas</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-mono text-white">
+                        {agent.tasksCompleted}
+                      </p>
+                      <p className="text-[10px] text-muted">Completadas</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-mono text-white">
+                        {agent.avgResponseTime > 0
+                          ? `${agent.avgResponseTime}ms`
+                          : "-"}
+                      </p>
+                      <p className="text-[10px] text-muted">Resp.</p>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Activity Feed */}
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+            Actividad Reciente
+          </h2>
+          <div className="bg-card border border-card-border rounded-xl p-4 space-y-3 max-h-[500px] overflow-y-auto">
+            {logs.map((log) => (
+              <div
+                key={log.id}
+                className="flex items-start gap-2 text-xs border-b border-card-border pb-2 last:border-0"
+              >
+                <LogLevelDot level={log.level} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-foreground truncate">{log.message}</p>
+                  <p className="text-muted mt-0.5">
+                    {log.agentName} &middot;{" "}
+                    {new Date(log.timestamp).toLocaleTimeString("es-MX")}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color: string;
+}) {
+  return (
+    <div className="bg-card border border-card-border rounded-xl p-4">
+      <p className="text-xs text-muted mb-1">{label}</p>
+      <p className={`text-2xl font-mono font-bold ${color}`}>{value}</p>
+    </div>
+  );
+}
+
+function ResourceBar({ label, value }: { label: string; value: number }) {
+  const color =
+    value > 80 ? "bg-danger" : value > 60 ? "bg-warning" : "bg-success";
+  return (
+    <div className="bg-card border border-card-border rounded-xl p-4">
+      <div className="flex justify-between items-center mb-2">
+        <p className="text-xs text-muted">{label}</p>
+        <p className="text-sm font-mono text-white">{value}%</p>
+      </div>
+      <div className="h-2 bg-background rounded-full overflow-hidden">
+        <div
+          className={`h-full ${color} rounded-full transition-all`}
+          style={{ width: `${value}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function LogLevelDot({ level }: { level: LogEntry["level"] }) {
+  const colors = {
+    info: "bg-accent",
+    warn: "bg-warning",
+    error: "bg-danger",
+    debug: "bg-muted",
+  };
+  return (
+    <span
+      className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${colors[level]}`}
+    />
   );
 }
