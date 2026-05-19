@@ -1,5 +1,4 @@
 import { Agent, LogEntry, SystemMetrics } from "./types";
-import { agents as mockAgents, generateLogs, systemMetrics as mockMetrics } from "./mock-data";
 
 // In-memory store — persists as long as the serverless function is warm.
 // For production, replace with a database (Vercel KV, Supabase, etc.)
@@ -7,13 +6,7 @@ import { agents as mockAgents, generateLogs, systemMetrics as mockMetrics } from
 const agentMap = new Map<string, Agent>();
 const logEntries: LogEntry[] = [];
 
-// Initialize with mock data
-for (const a of mockAgents) {
-  agentMap.set(a.id, { ...a });
-}
-for (const l of generateLogs(50)) {
-  logEntries.push(l);
-}
+// No mock agents — only real agents connected via MCP will appear.
 
 // ── Agent operations ──
 
@@ -54,6 +47,10 @@ export function upsertAgent(data: Partial<Agent> & { id: string }): Agent {
   return agent;
 }
 
+export function deleteAgent(id: string): boolean {
+  return agentMap.delete(id);
+}
+
 export function updateAgentStatus(
   id: string,
   status: Agent["status"],
@@ -74,7 +71,7 @@ export function updateAgentStatus(
 // ── Log operations ──
 
 export function getLogs(limit = 100, agentId?: string): LogEntry[] {
-  let filtered = agentId
+  const filtered = agentId
     ? logEntries.filter((l) => l.agentId === agentId)
     : logEntries;
   return filtered
@@ -85,7 +82,6 @@ export function getLogs(limit = 100, agentId?: string): LogEntry[] {
 export function addLog(entry: Omit<LogEntry, "id">): LogEntry {
   const log: LogEntry = { ...entry, id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` };
   logEntries.push(log);
-  // Keep last 500 logs in memory
   if (logEntries.length > 500) logEntries.splice(0, logEntries.length - 500);
   return log;
 }
@@ -94,17 +90,17 @@ export function addLog(entry: Omit<LogEntry, "id">): LogEntry {
 
 export function getMetrics(): SystemMetrics {
   const agents = getAgents();
+  const withResponse = agents.filter((a) => a.avgResponseTime > 0);
   return {
     totalAgents: agents.length,
     onlineAgents: agents.filter((a) => a.status === "online" || a.status === "busy").length,
     totalTasksToday: agents.reduce((sum, a) => sum + a.tasksCompleted, 0),
-    avgResponseTime: Math.round(
-      agents.filter((a) => a.avgResponseTime > 0).reduce((sum, a) => sum + a.avgResponseTime, 0) /
-        (agents.filter((a) => a.avgResponseTime > 0).length || 1)
-    ),
-    cpuUsage: mockMetrics.cpuUsage,
-    memoryUsage: mockMetrics.memoryUsage,
-    requestsPerMinute: mockMetrics.requestsPerMinute,
-    uptime: mockMetrics.uptime,
+    avgResponseTime: withResponse.length
+      ? Math.round(withResponse.reduce((sum, a) => sum + a.avgResponseTime, 0) / withResponse.length)
+      : 0,
+    cpuUsage: 0,
+    memoryUsage: 0,
+    requestsPerMinute: 0,
+    uptime: agents.length > 0 ? "Activo" : "Sin agentes",
   };
 }

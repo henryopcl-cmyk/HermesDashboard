@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { getAgents, getAgent, upsertAgent, updateAgentStatus, addLog, getLogs, getMetrics } from "./store";
+import { getAgents, getAgent, upsertAgent, deleteAgent, updateAgentStatus, addLog, getLogs, getMetrics } from "./store";
 
 export function createHermesMcpServer(): McpServer {
   const server = new McpServer({
@@ -203,6 +203,44 @@ export function createHermesMcpServer(): McpServer {
           {
             type: "text" as const,
             text: JSON.stringify({ success: true, tasks_completed: agent.tasksCompleted + 1 }),
+          },
+        ],
+      };
+    }
+  );
+
+  // ── Tool: delete_agent ──
+  server.tool(
+    "delete_agent",
+    "Elimina un agente de Mission Control",
+    {
+      agent_id: z.string().describe("ID del agente a eliminar"),
+    },
+    async ({ agent_id }) => {
+      const agent = getAgent(agent_id);
+      if (!agent) {
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({ error: "Agent not found" }) }],
+          isError: true,
+        };
+      }
+
+      const name = agent.name;
+      deleteAgent(agent_id);
+
+      addLog({
+        agentId: agent_id,
+        agentName: name,
+        level: "warn",
+        message: `Agente ${name} eliminado de Mission Control`,
+        timestamp: new Date().toISOString(),
+      });
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({ success: true, deleted: agent_id, name }),
           },
         ],
       };
