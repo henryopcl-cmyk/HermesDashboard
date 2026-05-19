@@ -79,17 +79,31 @@ export default function AgentDetail({ params }: { params: Promise<{ id: string }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text }),
       });
-      const userMsg: ChatMessage = await res.json();
-      setMessages((prev) => {
-        const ids = new Set(prev.map((m) => m.id));
-        if (ids.has(userMsg.id)) return prev;
-        return [...prev, userMsg];
-      });
-      lastPollRef.current = userMsg.timestamp;
+      const data = await res.json();
+
+      // API may return { userMessage, assistantMessage } if NVIDIA key is set,
+      // or just the user message if waiting for MCP relay
+      const addMsg = (msg: ChatMessage) => {
+        setMessages((prev) => {
+          const ids = new Set(prev.map((m) => m.id));
+          if (ids.has(msg.id)) return prev;
+          return [...prev, msg];
+        });
+        lastPollRef.current = msg.timestamp;
+      };
+
+      if (data.userMessage && data.assistantMessage) {
+        // Direct NVIDIA response
+        addMsg(data.userMessage);
+        addMsg(data.assistantMessage);
+        setSending(false);
+      } else {
+        // Only user msg stored — waiting for MCP agent response
+        addMsg(data);
+      }
     } catch {
       setSending(false);
     }
-    // sending stays true until we poll an assistant response
   }
 
   if (!agent) {

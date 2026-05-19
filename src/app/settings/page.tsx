@@ -39,6 +39,23 @@ export default function SettingsPage() {
         <p className="text-[11px] text-muted leading-relaxed">Usa esta URL en tus agentes de Hermes para conectarlos al Mission Control.</p>
       </Section>
 
+      <Section title="Webhook Chat" icon="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155">
+        <div className="bg-surface/80 rounded-xl p-3 border border-card-border">
+          <p className="text-[11px] text-muted mb-1">URL del Webhook</p>
+          <p className="text-sm font-mono text-gold-light break-all">hermes-dashboard-theta-two.vercel.app/api/webhook/chat</p>
+        </div>
+        <div className="bg-surface/80 rounded-xl p-3 border border-card-border">
+          <p className="text-[11px] text-muted mb-2">Ejemplo de uso (POST)</p>
+          <pre className="text-[11px] font-mono text-foreground/80 whitespace-pre-wrap break-all leading-relaxed">{`{
+  "agent_id": "mercury",
+  "message": "Hola desde Telegram",
+  "role": "user",
+  "source": "telegram"
+}`}</pre>
+        </div>
+        <p className="text-[11px] text-muted leading-relaxed">Usa este webhook para conectar Telegram, Slack u otros canales al chat del dashboard.</p>
+      </Section>
+
       <Section title="Preferencias" icon="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75">
         <label className="flex items-start gap-3 cursor-pointer p-3 bg-surface/50 rounded-xl hover:bg-surface/80 transition-colors">
           <input type="checkbox" checked={notifications} onChange={(e) => setNotifications(e.target.checked)} className="accent-gold w-4 h-4 mt-0.5" />
