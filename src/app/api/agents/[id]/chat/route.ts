@@ -76,7 +76,7 @@ export async function POST(
   }
 
   try {
-    const model = agent.config.apiModel || agent.model || "nvidia/llama-3.1-nemotron-70b-instruct";
+    const model = agent.config.apiModel || agent.model || process.env.NVIDIA_MODEL || "nvidia/llama-3.1-nemotron-70b-instruct";
 
     const nvidiaRes = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
       method: "POST",
