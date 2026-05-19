@@ -76,9 +76,10 @@ export async function POST(
   }
 
   try {
-    const model = agent.config.apiModel || agent.model || process.env.NVIDIA_MODEL || "nvidia/llama-3.1-nemotron-70b-instruct";
+    const model = agent.config.apiModel || agent.model || process.env.NVIDIA_MODEL || "nvidia/nemotron-3-super-120b-a12b:free";
+    const apiBase = process.env.AI_API_BASE || "https://openrouter.ai/api/v1/chat/completions";
 
-    const nvidiaRes = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    const nvidiaRes = await fetch(apiBase, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
