@@ -1,4 +1,4 @@
-import { agents } from "@/lib/mock-data";
+import { getAgent } from "@/lib/store";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -6,9 +6,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const agent = agents.find((a) => a.id === id);
+  const agent = getAgent(id);
   if (!agent) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
   return NextResponse.json(agent);
 }
+
+export const dynamic = "force-dynamic";

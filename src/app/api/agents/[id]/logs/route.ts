@@ -1,4 +1,4 @@
-import { generateLogs } from "@/lib/mock-data";
+import { getLogs } from "@/lib/store";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const allLogs = generateLogs(100);
-  const agentLogs = allLogs.filter((l) => l.agentId === id);
-  return NextResponse.json(agentLogs);
+  return NextResponse.json(getLogs(100, id));
 }
+
+export const dynamic = "force-dynamic";

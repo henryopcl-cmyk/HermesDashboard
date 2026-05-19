@@ -1,6 +1,8 @@
-import { agents } from "@/lib/mock-data";
+import { getAgents } from "@/lib/store";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  return NextResponse.json(agents);
+  return NextResponse.json(getAgents());
 }
+
+export const dynamic = "force-dynamic";

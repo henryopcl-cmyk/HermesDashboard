@@ -1,6 +1,8 @@
-import { generateLogs } from "@/lib/mock-data";
+import { getLogs } from "@/lib/store";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  return NextResponse.json(generateLogs(100));
+  return NextResponse.json(getLogs(100));
 }
+
+export const dynamic = "force-dynamic";
