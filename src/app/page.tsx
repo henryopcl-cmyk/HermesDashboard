@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Agent, SystemMetrics, LogEntry } from "@/lib/types";
 import { StatusBadge } from "@/components/StatusBadge";
-import { GodAvatar } from "@/components/GodAvatar";
+import { GodAvatar, getAgentColor } from "@/components/GodAvatar";
 import Link from "next/link";
 
 export default function MissionControl() {
@@ -39,10 +39,40 @@ export default function MissionControl() {
       {/* Metrics */}
       {metrics && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <MetricCard label="Agentes Online" value={metrics.totalAgents > 0 ? `${metrics.onlineAgents}/${metrics.totalAgents}` : "0"} accent="gold" />
-          <MetricCard label="Tareas Completadas" value={metrics.totalTasksToday.toString()} accent="accent" />
-          <MetricCard label="Tiempo Resp." value={metrics.avgResponseTime > 0 ? `${metrics.avgResponseTime}ms` : "-"} accent="success" />
-          <MetricCard label="Req/min" value={metrics.requestsPerMinute > 0 ? metrics.requestsPerMinute.toString() : "-"} accent="warning" />
+          <MetricCard label="Agentes Online" value={metrics.totalAgents > 0 ? `${metrics.onlineAgents}/${metrics.totalAgents}` : "0"} accent="gold" icon="M13 10V3L4 14h7v7l9-11h-7z" />
+          <MetricCard label="Tareas Completadas" value={metrics.totalTasksToday.toString()} accent="accent" icon="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <MetricCard label="Tiempo Resp." value={metrics.avgResponseTime > 0 ? `${metrics.avgResponseTime}ms` : "-"} accent="success" icon="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <MetricCard label="Req/min" value={metrics.requestsPerMinute > 0 ? metrics.requestsPerMinute.toString() : "-"} accent="warning" icon="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
+        </div>
+      )}
+
+      {/* System status bar */}
+      {metrics && metrics.totalAgents > 0 && (
+        <div className="glass-card rounded-2xl p-3 sm:p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] text-muted uppercase tracking-wider font-medium">Rendimiento del sistema</span>
+            <span className="text-[10px] text-gold/60 font-mono">uptime: {metrics.uptime}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="flex justify-between text-[10px] mb-1">
+                <span className="text-muted">CPU</span>
+                <span className="text-foreground font-mono">{metrics.cpuUsage}%</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-surface overflow-hidden">
+                <div className="h-full rounded-full bg-gradient-to-r from-accent to-accent-light transition-all duration-1000" style={{ width: `${metrics.cpuUsage}%` }} />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-[10px] mb-1">
+                <span className="text-muted">Memoria</span>
+                <span className="text-foreground font-mono">{metrics.memoryUsage}%</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-surface overflow-hidden">
+                <div className="h-full rounded-full bg-gradient-to-r from-gold to-gold-light transition-all duration-1000" style={{ width: `${metrics.memoryUsage}%` }} />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -69,21 +99,30 @@ export default function MissionControl() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {agents.map((agent, i) => (
                 <Link key={agent.id} href={`/agents/${agent.id}`}>
-                  <div className="glass-card rounded-2xl p-4 hover:bg-card-hover transition-all duration-300 cursor-pointer group" style={{ animationDelay: `${i * 0.05}s` }}>
-                    <div className="flex items-start gap-3 mb-3">
-                      <GodAvatar agentId={agent.id} size="md" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <h3 className="font-semibold text-white text-sm group-hover:text-gold-light transition-colors truncate">{agent.name}</h3>
-                          <StatusBadge status={agent.status} />
+                  <div className="glass-card rounded-2xl overflow-hidden hover:bg-card-hover transition-all duration-300 cursor-pointer group" style={{ animationDelay: `${i * 0.05}s` }}>
+                    {/* Top accent */}
+                    <div className={`h-0.5 ${agent.status === "online" ? "bg-success" : agent.status === "busy" ? "bg-warning" : agent.status === "error" ? "bg-danger" : "bg-muted/30"}`} />
+                    <div className="p-4">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="relative">
+                          <GodAvatar agentId={agent.id} size="md" />
+                          {agent.status === "busy" && (
+                            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-warning border-2 border-card animate-pulse" />
+                          )}
                         </div>
-                        <p className="text-[11px] text-muted truncate">{agent.role}</p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="font-semibold text-white text-sm group-hover:text-gold-light transition-colors truncate">{agent.name}</h3>
+                            <StatusBadge status={agent.status} />
+                          </div>
+                          <p className="text-[11px] text-muted truncate">{agent.role}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1">
-                      <Stat value={agent.tasksRunning.toString()} label="Activas" />
-                      <Stat value={agent.tasksCompleted.toString()} label="Completadas" />
-                      <Stat value={agent.avgResponseTime > 0 ? `${agent.avgResponseTime}ms` : "-"} label="Resp." />
+                      <div className="grid grid-cols-3 gap-1">
+                        <Stat value={agent.tasksRunning.toString()} label="Activas" />
+                        <Stat value={agent.tasksCompleted.toString()} label="Completadas" />
+                        <Stat value={agent.avgResponseTime > 0 ? `${agent.avgResponseTime}ms` : "-"} label="Resp." />
+                      </div>
                     </div>
                   </div>
                 </Link>
@@ -118,17 +157,31 @@ export default function MissionControl() {
   );
 }
 
-function MetricCard({ label, value, accent }: { label: string; value: string; accent: string }) {
+function MetricCard({ label, value, accent, icon }: { label: string; value: string; accent: string; icon: string }) {
   const colors: Record<string, string> = {
     gold: "text-gold-light",
     accent: "text-accent-light",
     success: "text-success",
     warning: "text-warning",
   };
+  const glows: Record<string, string> = {
+    gold: "from-gold/5 to-transparent",
+    accent: "from-accent/5 to-transparent",
+    success: "from-success/5 to-transparent",
+    warning: "from-warning/5 to-transparent",
+  };
   return (
-    <div className="glass-card rounded-2xl p-3 sm:p-4 shimmer">
-      <p className="text-[10px] sm:text-[11px] text-muted uppercase tracking-wider mb-1.5">{label}</p>
-      <p className={`text-xl sm:text-2xl font-mono font-bold ${colors[accent]}`}>{value}</p>
+    <div className="glass-card rounded-2xl p-3 sm:p-4 relative overflow-hidden">
+      <div className={`absolute inset-0 bg-gradient-to-br ${glows[accent]} pointer-events-none`} />
+      <div className="relative">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] sm:text-[11px] text-muted uppercase tracking-wider">{label}</p>
+          <svg className={`w-4 h-4 ${colors[accent]} opacity-40`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
+          </svg>
+        </div>
+        <p className={`text-xl sm:text-2xl font-mono font-bold ${colors[accent]}`}>{value}</p>
+      </div>
     </div>
   );
 }
