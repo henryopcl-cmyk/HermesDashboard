@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, use } from "react";
+import { useEffect, useState, useRef, use, useCallback } from "react";
 import { Agent, ChatMessage, LogEntry } from "@/lib/types";
 import { StatusBadge } from "@/components/StatusBadge";
 import { GodAvatar, getAgentGradient } from "@/components/GodAvatar";
@@ -17,11 +17,50 @@ export default function AgentDetail({ params }: { params: Promise<{ id: string }
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const lastPollRef = useRef<string | null>(null);
+
+  // Load agent info + logs
+  useEffect(() => {
+    const load = () => {
+      fetch(`/api/agents/${id}`).then((r) => r.json()).then(setAgent);
+      fetch(`/api/agents/${id}/logs`).then((r) => r.json()).then(setLogs);
+    };
+    load();
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
+  }, [id]);
+
+  // Poll for chat messages every 2s
+  const pollMessages = useCallback(() => {
+    const url = lastPollRef.current
+      ? `/api/agents/${id}/chat?since=${encodeURIComponent(lastPollRef.current)}`
+      : `/api/agents/${id}/chat`;
+    fetch(url)
+      .then((r) => r.json())
+      .then((newMsgs: ChatMessage[]) => {
+        if (newMsgs.length > 0) {
+          setMessages((prev) => {
+            const ids = new Set(prev.map((m) => m.id));
+            const fresh = newMsgs.filter((m) => !ids.has(m.id));
+            if (fresh.length === 0) return prev;
+            return [...prev, ...fresh];
+          });
+          const latest = newMsgs[newMsgs.length - 1];
+          if (latest) lastPollRef.current = latest.timestamp;
+          // If we got an assistant message, we're no longer "sending"
+          if (newMsgs.some((m) => m.role === "assistant")) {
+            setSending(false);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [id]);
 
   useEffect(() => {
-    fetch(`/api/agents/${id}`).then((r) => r.json()).then(setAgent);
-    fetch(`/api/agents/${id}/logs`).then((r) => r.json()).then(setLogs);
-  }, [id]);
+    pollMessages(); // initial load
+    const interval = setInterval(pollMessages, 2000);
+    return () => clearInterval(interval);
+  }, [pollMessages]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -30,14 +69,27 @@ export default function AgentDetail({ params }: { params: Promise<{ id: string }
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim() || sending) return;
-    const userMsg: ChatMessage = { id: `msg-${Date.now()}`, role: "user", content: input.trim(), timestamp: new Date().toISOString(), agentId: id };
-    setMessages((prev) => [...prev, userMsg]);
+    const text = input.trim();
     setInput("");
     setSending(true);
-    const res = await fetch(`/api/agents/${id}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: userMsg.content }) });
-    const reply = await res.json();
-    setMessages((prev) => [...prev, reply]);
-    setSending(false);
+
+    try {
+      const res = await fetch(`/api/agents/${id}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+      });
+      const userMsg: ChatMessage = await res.json();
+      setMessages((prev) => {
+        const ids = new Set(prev.map((m) => m.id));
+        if (ids.has(userMsg.id)) return prev;
+        return [...prev, userMsg];
+      });
+      lastPollRef.current = userMsg.timestamp;
+    } catch {
+      setSending(false);
+    }
+    // sending stays true until we poll an assistant response
   }
 
   if (!agent) {
@@ -86,6 +138,9 @@ export default function AgentDetail({ params }: { params: Promise<{ id: string }
               tab === t ? "text-gold-light border-gold" : "text-muted border-transparent hover:text-foreground"
             }`}>
             {t === "chat" ? "Chat" : t === "logs" ? "Logs" : "Configuracion"}
+            {t === "chat" && sending && (
+              <span className="ml-2 inline-block w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
+            )}
           </button>
         ))}
       </div>
@@ -93,15 +148,32 @@ export default function AgentDetail({ params }: { params: Promise<{ id: string }
       {/* Chat */}
       {tab === "chat" && (
         <div className="glass-card rounded-2xl flex flex-col h-[calc(100vh-380px)] sm:h-[460px]">
+          {/* Connection info bar */}
+          <div className="px-4 py-2 border-b border-card-border flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[10px] text-muted">
+              <span className={`w-1.5 h-1.5 rounded-full ${agent.status === "online" || agent.status === "busy" ? "bg-success animate-pulse-dot" : "bg-muted"}`} />
+              {agent.status === "online" || agent.status === "busy" ? "Conectado via MCP" : "Agente desconectado"}
+            </div>
+            <span className="text-[10px] text-muted/60 font-mono">polling 2s</span>
+          </div>
+
           <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
-            {messages.length === 0 && (
+            {messages.length === 0 && !sending && (
               <div className="flex flex-col items-center justify-center h-full text-center px-4">
                 <GodAvatar agentId={agent.id} size="lg" />
                 <p className="text-sm text-muted mt-3">Habla con <span className="text-gold-light font-medium">{agent.name}</span></p>
+                <p className="text-[11px] text-muted/60 mt-1 max-w-xs">
+                  Tu mensaje se enviara al agente via MCP. La respuesta aparecera aqui en tiempo real.
+                </p>
               </div>
             )}
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                {msg.role === "assistant" && (
+                  <div className="mr-2 mt-1 shrink-0">
+                    <GodAvatar agentId={agent.id} size="sm" />
+                  </div>
+                )}
                 <div className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-3.5 py-2.5 text-sm ${
                   msg.role === "user" ? "bg-gold/15 text-gold-light border border-gold/10 rounded-br-md" : "bg-surface border border-card-border text-foreground rounded-bl-md"
                 }`}>
@@ -112,13 +184,17 @@ export default function AgentDetail({ params }: { params: Promise<{ id: string }
                 </div>
               </div>
             ))}
-            {sending && (
+            {sending && !messages.some((m, i) => m.role === "assistant" && i === messages.length - 1) && (
               <div className="flex justify-start">
+                <div className="mr-2 mt-1 shrink-0">
+                  <GodAvatar agentId={agent.id} size="sm" />
+                </div>
                 <div className="bg-surface border border-card-border rounded-2xl rounded-bl-md px-4 py-3">
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 items-center">
                     <span className="w-2 h-2 rounded-full bg-gold/40 animate-bounce" />
                     <span className="w-2 h-2 rounded-full bg-gold/40 animate-bounce [animation-delay:0.15s]" />
                     <span className="w-2 h-2 rounded-full bg-gold/40 animate-bounce [animation-delay:0.3s]" />
+                    <span className="text-[10px] text-muted/50 ml-2">esperando respuesta del agente...</span>
                   </div>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { getAgents, getAgent, upsertAgent, deleteAgent, updateAgentStatus, addLog, getLogs, getMetrics } from "./store";
+import { getAgents, getAgent, upsertAgent, deleteAgent, updateAgentStatus, addLog, getLogs, getMetrics, getPendingMessages, getAllPendingMessages, addChatMessage } from "./store";
 
 export function createHermesMcpServer(): McpServer {
   const server = new McpServer({
@@ -243,6 +243,75 @@ export function createHermesMcpServer(): McpServer {
             text: JSON.stringify({ success: true, deleted: agent_id, name }),
           },
         ],
+      };
+    }
+  );
+
+  // ── Tool: get_pending_messages ──
+  server.tool(
+    "get_pending_messages",
+    "Obtiene mensajes pendientes del dashboard para un agente (o todos). Los mensajes se marcan como entregados al leerlos.",
+    {
+      agent_id: z.string().optional().describe("ID del agente. Si no se especifica, devuelve mensajes de todos los agentes"),
+    },
+    async ({ agent_id }) => {
+      if (agent_id) {
+        const messages = getPendingMessages(agent_id);
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({ agent_id, messages, count: messages.length }),
+          }],
+        };
+      }
+      const all = getAllPendingMessages();
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({ agents: all, total: all.reduce((s, a) => s + a.messages.length, 0) }),
+        }],
+      };
+    }
+  );
+
+  // ── Tool: send_chat_response ──
+  server.tool(
+    "send_chat_response",
+    "Envia una respuesta del agente al chat del dashboard. El mensaje aparecera en tiempo real en la UI.",
+    {
+      agent_id: z.string().describe("ID del agente que responde"),
+      message: z.string().describe("Contenido de la respuesta"),
+      reply_to: z.string().optional().describe("ID del mensaje al que responde (opcional)"),
+    },
+    async ({ agent_id, message, reply_to }) => {
+      const agent = getAgent(agent_id);
+      if (!agent) {
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({ error: "Agent not found" }) }],
+          isError: true,
+        };
+      }
+
+      const chatMsg = addChatMessage(agent_id, {
+        role: "assistant",
+        content: message,
+        timestamp: new Date().toISOString(),
+        agentId: agent_id,
+      });
+
+      addLog({
+        agentId: agent_id,
+        agentName: agent.name,
+        level: "info",
+        message: `Chat response enviado desde ${agent.name}`,
+        timestamp: new Date().toISOString(),
+      });
+
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({ success: true, message_id: chatMsg.id, reply_to }),
+        }],
       };
     }
   );

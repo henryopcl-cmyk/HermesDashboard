@@ -1,10 +1,12 @@
-import { Agent, LogEntry, SystemMetrics } from "./types";
+import { Agent, ChatMessage, LogEntry, SystemMetrics } from "./types";
 
 // In-memory store — persists as long as the serverless function is warm.
 // For production, replace with a database (Vercel KV, Supabase, etc.)
 
 const agentMap = new Map<string, Agent>();
 const logEntries: LogEntry[] = [];
+const chatMessages = new Map<string, ChatMessage[]>(); // agentId -> messages
+const pendingMessages = new Map<string, ChatMessage[]>(); // agentId -> undelivered user msgs
 
 // No mock agents — only real agents connected via MCP will appear.
 
@@ -84,6 +86,49 @@ export function addLog(entry: Omit<LogEntry, "id">): LogEntry {
   logEntries.push(log);
   if (logEntries.length > 500) logEntries.splice(0, logEntries.length - 500);
   return log;
+}
+
+// ── Chat operations ──
+
+export function addChatMessage(agentId: string, msg: Omit<ChatMessage, "id">): ChatMessage {
+  const message: ChatMessage = { ...msg, id: `chat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` };
+  const list = chatMessages.get(agentId) || [];
+  list.push(message);
+  if (list.length > 200) list.splice(0, list.length - 200);
+  chatMessages.set(agentId, list);
+
+  // If it's a user message, also add to pending queue for the agent to pick up
+  if (msg.role === "user") {
+    const pending = pendingMessages.get(agentId) || [];
+    pending.push(message);
+    pendingMessages.set(agentId, pending);
+  }
+  return message;
+}
+
+export function getChatMessages(agentId: string, since?: string): ChatMessage[] {
+  const list = chatMessages.get(agentId) || [];
+  if (!since) return list;
+  const sinceTime = new Date(since).getTime();
+  return list.filter((m) => new Date(m.timestamp).getTime() > sinceTime);
+}
+
+export function getPendingMessages(agentId: string): ChatMessage[] {
+  const pending = pendingMessages.get(agentId) || [];
+  // Clear after reading
+  pendingMessages.set(agentId, []);
+  return pending;
+}
+
+export function getAllPendingMessages(): { agentId: string; messages: ChatMessage[] }[] {
+  const result: { agentId: string; messages: ChatMessage[] }[] = [];
+  pendingMessages.forEach((msgs, agentId) => {
+    if (msgs.length > 0) {
+      result.push({ agentId, messages: [...msgs] });
+      pendingMessages.set(agentId, []);
+    }
+  });
+  return result;
 }
 
 // ── Metrics ──

@@ -1,12 +1,31 @@
-import { agents } from "@/lib/mock-data";
 import { NextRequest, NextResponse } from "next/server";
+import { getAgent, addChatMessage, getChatMessages } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+
+// GET — poll for chat messages (supports ?since=ISO timestamp for incremental)
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const agent = getAgent(id);
+  if (!agent) {
+    return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+  }
+
+  const since = req.nextUrl.searchParams.get("since") || undefined;
+  const messages = getChatMessages(id, since);
+  return NextResponse.json(messages);
+}
+
+// POST — send a message from the dashboard user to an agent
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const agent = agents.find((a) => a.id === id);
+  const agent = getAgent(id);
   if (!agent) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
@@ -14,30 +33,17 @@ export async function POST(
   const body = await req.json();
   const { message } = body;
 
-  if (!message) {
-    return NextResponse.json(
-      { error: "message is required" },
-      { status: 400 }
-    );
+  if (!message || typeof message !== "string") {
+    return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
 
-  // Mock response — replace with real NVIDIA API call to your server
-  const mockResponses: Record<string, string> = {
-    mercury: `[Mercury] Mensaje recibido. He procesado tu solicitud y notificado a los sistemas relevantes. Hay 3 notificaciones pendientes en la cola.`,
-    apollo: `[Apollo] Analisis completado. Los datos muestran un incremento del 12% en requests esta semana. El patron sugiere mayor actividad entre 10am-2pm.`,
-    athena: `[Athena] Investigacion en progreso. He recopilado informacion de 5 fuentes distintas. El resumen estara listo en breve.`,
-    prometheus: `[Prometheus] Workflow ejecutado. La tarea de automatizacion se completo en 2.3s. Todos los procesos dependientes fueron notificados.`,
-    iris: `[Iris] Entendido. He revisado la base de conocimiento y encontre 3 articulos relevantes para tu consulta. Te puedo asistir con mas detalles.`,
-    atlas: `[Atlas] Alerta: El servicio esta en recuperacion. Ultimo health check fallo hace 2h. Intentando reconexion...`,
-  };
-
-  const reply = mockResponses[id] || `[${agent.name}] Respuesta procesada.`;
-
-  return NextResponse.json({
-    id: `msg-${Date.now()}`,
-    role: "assistant",
-    content: reply,
+  // Store as user message — goes into chat history AND pending queue for agent
+  const chatMsg = addChatMessage(id, {
+    role: "user",
+    content: message.trim(),
     timestamp: new Date().toISOString(),
     agentId: id,
   });
+
+  return NextResponse.json(chatMsg);
 }
