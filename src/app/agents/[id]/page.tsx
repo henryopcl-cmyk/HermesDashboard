@@ -93,12 +93,24 @@ export default function AgentDetail({ params }: { params: Promise<{ id: string }
       };
 
       if (data.userMessage && data.assistantMessage) {
-        // Direct NVIDIA response
+        // Direct API response
         addMsg(data.userMessage);
         addMsg(data.assistantMessage);
         setSending(false);
-      } else {
-        // Only user msg stored — waiting for MCP agent response
+      } else if (data.userMessage && data.error) {
+        // API error — show user msg + error
+        addMsg(data.userMessage);
+        const errMsg: ChatMessage = {
+          id: `err-${Date.now()}`,
+          role: "assistant",
+          content: `Error: ${data.error} — ${data.detail || "Sin detalles"}`,
+          timestamp: new Date().toISOString(),
+          agentId: id,
+        };
+        setMessages((prev) => [...prev, errMsg]);
+        setSending(false);
+      } else if (data.id) {
+        // Only user msg — waiting for MCP relay
         addMsg(data);
       }
     } catch {

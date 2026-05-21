@@ -45,11 +45,10 @@ export async function POST(
     agentId: id,
   });
 
-  // Get NVIDIA API key from env
-  const apiKey = process.env.NVIDIA_API_KEY;
+  // Get API key from env (supports NVIDIA_API_KEY or OPENROUTER_API_KEY)
+  const apiKey = process.env.NVIDIA_API_KEY || process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    // No API key — store message for MCP relay, return user msg only
-    return NextResponse.json(userMsg);
+    return NextResponse.json({ userMessage: userMsg, error: "NO_API_KEY", detail: "Set NVIDIA_API_KEY or OPENROUTER_API_KEY in Vercel env vars" });
   }
 
   // Build conversation history for context
@@ -99,11 +98,10 @@ export async function POST(
         agentId: id,
         agentName: agent.name,
         level: "error",
-        message: `NVIDIA API error (${nvidiaRes.status}): ${errText.slice(0, 200)}`,
+        message: `API error (${nvidiaRes.status}): ${errText.slice(0, 200)}`,
         timestamp: new Date().toISOString(),
       });
-      // Return user msg — agent can still respond via MCP
-      return NextResponse.json(userMsg);
+      return NextResponse.json({ userMessage: userMsg, error: "API_ERROR", status: nvidiaRes.status, detail: errText.slice(0, 500) });
     }
 
     const data = await nvidiaRes.json();
@@ -128,14 +126,14 @@ export async function POST(
     // Return both messages so the UI can show them immediately
     return NextResponse.json({ userMessage: userMsg, assistantMessage: assistantMsg });
   } catch (err) {
+    const errMsg = err instanceof Error ? err.message : "unknown";
     addLog({
       agentId: id,
       agentName: agent.name,
       level: "error",
-      message: `Chat error: ${err instanceof Error ? err.message : "unknown"}`,
+      message: `Chat error: ${errMsg}`,
       timestamp: new Date().toISOString(),
     });
-    // Return user msg — agent can still respond via MCP
-    return NextResponse.json(userMsg);
+    return NextResponse.json({ userMessage: userMsg, error: "EXCEPTION", detail: errMsg });
   }
 }
