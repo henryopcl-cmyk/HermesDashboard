@@ -27,7 +27,7 @@ export default function FactoryPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Particle system for busy/online agents
+  // Ember/spark particles for the forge
   useEffect(() => {
     const interval = setInterval(() => {
       setParticles((prev) => {
@@ -35,7 +35,6 @@ export default function FactoryPage() {
           .map((p) => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, life: p.life - 1 }))
           .filter((p) => p.life > 0);
 
-        // Spawn new particles for busy agents
         const busyCount = agents.filter((a) => a.status === "busy" || a.status === "online").length;
         const newParticles: Particle[] = [];
         for (let i = 0; i < Math.min(busyCount, 3); i++) {
@@ -44,9 +43,9 @@ export default function FactoryPage() {
             x: 20 + Math.random() * 60,
             y: 20 + Math.random() * 60,
             vx: (Math.random() - 0.5) * 0.3,
-            vy: (Math.random() - 0.5) * 0.3,
+            vy: -Math.random() * 0.2 - 0.1,
             life: 60 + Math.floor(Math.random() * 40),
-            color: ["#d4a853", "#6366f1", "#10b981", "#f59e0b"][Math.floor(Math.random() * 4)],
+            color: ["#c9a84c", "#cd7f32", "#e8d48b", "#a0413a"][Math.floor(Math.random() * 4)],
           });
         }
         return [...alive, ...newParticles].slice(-80);
@@ -67,36 +66,49 @@ export default function FactoryPage() {
       {/* Header */}
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-hermes">Fabrica de Agentes</h1>
-          <p className="text-xs sm:text-sm text-muted mt-1">Visualizacion en tiempo real del trabajo de los agentes</p>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-7 h-7 rounded-full bg-bronze/10 border border-bronze/20 flex items-center justify-center">
+              <svg className="w-4 h-4 text-bronze" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" />
+              </svg>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold text-hermes tracking-wide">Forge of Hephaestus</h1>
+          </div>
+          <p className="text-xs sm:text-sm text-muted mt-1 ml-10 italic">Where divine agents are forged in celestial fire</p>
         </div>
         <div className="flex items-center gap-3 text-[11px]">
-          <span className="flex items-center gap-1.5 text-success"><span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-dot" />{onlineAgents.length} activos</span>
-          <span className="flex items-center gap-1.5 text-warning"><span className="w-1.5 h-1.5 rounded-full bg-warning" />{busyAgents.length} ocupados</span>
-          <span className="flex items-center gap-1.5 text-muted"><span className="w-1.5 h-1.5 rounded-full bg-muted" />{totalTasks} tareas</span>
+          <span className="flex items-center gap-1.5 text-success"><span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-dot" />{onlineAgents.length} active</span>
+          <span className="flex items-center gap-1.5 text-warning"><span className="w-1.5 h-1.5 rounded-full bg-warning" />{busyAgents.length} forging</span>
+          <span className="flex items-center gap-1.5 text-muted"><span className="w-1.5 h-1.5 rounded-full bg-muted" />{totalTasks} quests</span>
         </div>
       </div>
 
       {agents.length === 0 ? (
-        <div className="glass-card rounded-2xl p-10 sm:p-16 text-center max-w-lg mx-auto">
-          <div className="w-20 h-20 mx-auto mb-5 rounded-3xl bg-gradient-to-br from-gold/10 to-gold-light/5 border border-gold/15 flex items-center justify-center">
-            <svg className="w-10 h-10 text-gold/30 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.84-3.37a.75.75 0 01-.38-.65V7.47a.75.75 0 01.38-.65l5.84-3.37a.75.75 0 01.76 0l5.84 3.37a.75.75 0 01.38.65v3.68a.75.75 0 01-.38.65l-5.84 3.37a.75.75 0 01-.76 0z" />
-            </svg>
+        <div className="glass-card rounded-2xl p-10 sm:p-16 text-center max-w-lg mx-auto relative overflow-hidden">
+          <div className="absolute inset-0 olympus-gradient pointer-events-none" />
+          <div className="relative">
+            <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-gradient-to-br from-bronze/10 to-gold/5 border border-bronze/15 flex items-center justify-center">
+              <svg className="w-10 h-10 text-bronze/30 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
+              </svg>
+            </div>
+            <h2 className="text-base font-semibold text-white mb-2">The Forge Sleeps</h2>
+            <p className="text-xs text-muted leading-relaxed italic">
+              The sacred forge will ignite when agents connect to the Oracle endpoint.
+            </p>
           </div>
-          <h2 className="text-base font-semibold text-white mb-2">Fabrica inactiva</h2>
-          <p className="text-xs text-muted leading-relaxed">
-            La fabrica se activara cuando los agentes se conecten al MCP endpoint.
-          </p>
         </div>
       ) : (
         <>
-          {/* Main factory visualization */}
+          {/* Main forge visualization */}
           <div className="glass-card rounded-2xl overflow-hidden relative" style={{ minHeight: "420px" }}>
-            {/* Animated grid background */}
+            {/* Forge heat background */}
             <div className="absolute inset-0 grid-bg opacity-50" />
+            <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-bronze/[0.04] to-transparent pointer-events-none" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gold/[0.03] rounded-full blur-3xl pointer-events-none" />
 
-            {/* Floating particles */}
+            {/* Floating embers */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               {particles.map((p) => (
                 <div
@@ -114,7 +126,7 @@ export default function FactoryPage() {
               ))}
             </div>
 
-            {/* Connection lines between agents (SVG) */}
+            {/* Connection lines */}
             {agents.length > 1 && (
               <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ minHeight: "420px" }}>
                 {agents.map((agent, i) => {
@@ -128,17 +140,16 @@ export default function FactoryPage() {
                       y1={`${prevPos.y}%`}
                       x2={`${pos.x}%`}
                       y2={`${pos.y}%`}
-                      stroke="rgba(212,168,83,0.08)"
+                      stroke="rgba(201,168,76,0.06)"
                       strokeWidth="1"
-                      strokeDasharray="4 4"
+                      strokeDasharray="6 4"
                     >
                       {(agent.status === "online" || agent.status === "busy") && (
-                        <animate attributeName="stroke-dashoffset" from="8" to="0" dur="2s" repeatCount="indefinite" />
+                        <animate attributeName="stroke-dashoffset" from="10" to="0" dur="3s" repeatCount="indefinite" />
                       )}
                     </line>
                   );
                 })}
-                {/* Center hub connections */}
                 {agents.map((agent, i) => {
                   const pos = getNodePosition(i, agents.length);
                   return (
@@ -148,7 +159,7 @@ export default function FactoryPage() {
                       y1="50%"
                       x2={`${pos.x}%`}
                       y2={`${pos.y}%`}
-                      stroke={agent.status === "busy" ? "rgba(245,158,11,0.12)" : agent.status === "online" ? "rgba(16,185,129,0.1)" : "rgba(82,82,106,0.06)"}
+                      stroke={agent.status === "busy" ? "rgba(201,135,58,0.12)" : agent.status === "online" ? "rgba(107,143,94,0.1)" : "rgba(122,112,96,0.06)"}
                       strokeWidth="1"
                     >
                       {agent.status === "busy" && (
@@ -160,14 +171,14 @@ export default function FactoryPage() {
               </svg>
             )}
 
-            {/* Central hub */}
+            {/* Central Anvil */}
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-gold/20 to-gold/5 border border-gold/25 flex items-center justify-center animate-glow">
-                <svg className="w-8 h-8 sm:w-10 sm:h-10 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-gold/20 to-bronze/10 border border-gold/25 flex items-center justify-center animate-glow">
+                <svg className="w-8 h-8 sm:w-10 sm:h-10 text-gold" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
                 </svg>
               </div>
-              <p className="text-[9px] sm:text-[10px] text-gold/60 text-center mt-1.5 font-medium uppercase tracking-wider">Hermes Core</p>
+              <p className="text-[9px] sm:text-[10px] text-gold/60 text-center mt-1.5 font-medium uppercase tracking-[0.2em]">Sacred Forge</p>
             </div>
 
             {/* Agent nodes */}
@@ -198,7 +209,6 @@ export default function FactoryPage() {
                       <GodAvatar agentId={agent.id} size="lg" />
                     </div>
 
-                    {/* Agent label */}
                     <div className={`mt-2 text-center transition-all ${isSelected ? "scale-110" : ""}`}>
                       <p className="text-[10px] sm:text-xs font-semibold text-white truncate max-w-[80px] sm:max-w-[100px] mx-auto">{agent.name}</p>
                       {agent.status === "busy" && agent.tasksRunning > 0 && (
@@ -208,15 +218,10 @@ export default function FactoryPage() {
                           <span className="inline-block w-1 h-1 rounded-full bg-warning animate-bounce" style={{ animationDelay: "300ms" }} />
                         </div>
                       )}
-                      {agent.status === "online" && (
-                        <p className="text-[9px] text-success/70 mt-0.5">listo</p>
-                      )}
-                      {agent.status === "error" && (
-                        <p className="text-[9px] text-danger/70 mt-0.5">error</p>
-                      )}
+                      {agent.status === "online" && <p className="text-[9px] text-success/70 mt-0.5 italic">ready</p>}
+                      {agent.status === "error" && <p className="text-[9px] text-danger/70 mt-0.5">fallen</p>}
                     </div>
 
-                    {/* Task bubble */}
                     {agent.tasksRunning > 0 && (
                       <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-warning/20 border border-warning/30 flex items-center justify-center">
                         <span className="text-[9px] sm:text-[10px] font-bold text-warning">{agent.tasksRunning}</span>
@@ -228,44 +233,44 @@ export default function FactoryPage() {
             </div>
           </div>
 
-          {/* Agent detail panel (shows when an agent is selected) */}
+          {/* Agent detail panel */}
           {selected && (
-            <div className="glass-card rounded-2xl p-4 sm:p-5 animate-fade-in">
-              <div className="flex items-start gap-4">
+            <div className="glass-card rounded-2xl p-4 sm:p-5 animate-fade-in relative overflow-hidden">
+              <div className="absolute inset-0 torch-glow pointer-events-none" />
+              <div className="relative flex items-start gap-4">
                 <GodAvatar agentId={selected.id} size="xl" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="text-lg font-bold text-white">{selected.name}</h3>
                     <StatusIndicator status={selected.status} />
                   </div>
-                  <p className="text-xs text-gold/60 font-medium uppercase tracking-wider mt-0.5">{selected.role}</p>
-                  <p className="text-xs text-muted mt-1.5 leading-relaxed">{selected.description}</p>
+                  <p className="text-xs text-gold/60 font-medium uppercase tracking-[0.15em] mt-0.5">{selected.role}</p>
+                  <p className="text-xs text-muted mt-1.5 leading-relaxed italic">{selected.description}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-                    <MiniStat label="Tareas activas" value={selected.tasksRunning.toString()} color="text-warning" />
-                    <MiniStat label="Completadas" value={selected.tasksCompleted.toString()} color="text-success" />
-                    <MiniStat label="Tiempo resp." value={selected.avgResponseTime > 0 ? `${selected.avgResponseTime}ms` : "-"} color="text-accent-light" />
-                    <MiniStat label="Modelo" value={selected.model.split("/").pop() || "-"} color="text-gold-light" />
+                    <MiniStat label="Active quests" value={selected.tasksRunning.toString()} color="text-warning" />
+                    <MiniStat label="Victories" value={selected.tasksCompleted.toString()} color="text-success" />
+                    <MiniStat label="Oracle speed" value={selected.avgResponseTime > 0 ? `${selected.avgResponseTime}ms` : "-"} color="text-gold-light" />
+                    <MiniStat label="Power source" value={selected.model.split("/").pop() || "-"} color="text-bronze-light" />
                   </div>
                 </div>
               </div>
-              {/* Activity bar */}
               {selected.tasksRunning > 0 && (
-                <div className="mt-4 space-y-2">
-                  <p className="text-[10px] text-muted uppercase tracking-wider">Actividad en progreso</p>
-                  <div className="h-1.5 rounded-full bg-surface overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-warning to-gold shimmer-bar" style={{ width: "65%" }} />
+                <div className="mt-4 space-y-2 relative">
+                  <p className="text-[10px] text-muted uppercase tracking-[0.2em]">Forging in progress</p>
+                  <div className="h-2 rounded-full bg-surface overflow-hidden border border-gold/5">
+                    <div className="h-full rounded-full bg-gradient-to-r from-bronze to-gold shimmer-bar" style={{ width: "65%" }} />
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Agent status grid (compact view) */}
+          {/* Forge stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <FactoryStat label="Produccion" value={`${busyAgents.length + onlineAgents.length}`} sub="agentes activos" icon="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" color="text-gold-light" />
-            <FactoryStat label="En cola" value={totalTasks.toString()} sub="tareas corriendo" icon="M6 6.878V6a2.25 2.25 0 012.25-2.25h7.5A2.25 2.25 0 0118 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 004.5 9v.878m13.5-3A2.25 2.25 0 0119.5 9v.878m0 0a2.246 2.246 0 00-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0121 12v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6c0-.98.626-1.813 1.5-2.122" color="text-warning" />
-            <FactoryStat label="Errores" value={errorAgents.length.toString()} sub="requieren atencion" icon="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" color="text-danger" />
-            <FactoryStat label="Offline" value={offlineAgents.length.toString()} sub="desconectados" icon="M3 3l8.735 8.735m0 0a.374.374 0 11.53.53m-.53-.53l.53.53m0 0L21 21M14.652 9.348a3.75 3.75 0 010 5.304m2.121-7.425a6.75 6.75 0 010 9.546m2.121-11.667c3.808 3.807 3.808 9.98 0 13.788m-9.546-4.242a3.733 3.733 0 01-1.06-2.122m-1.061 4.243A6.72 6.72 0 015.88 12m-2.122 4.243a9.726 9.726 0 01-.453-1.194" color="text-muted" />
+            <ForgeStat label="Production" value={`${busyAgents.length + onlineAgents.length}`} sub="gods active" color="text-gold-light" />
+            <ForgeStat label="In Queue" value={totalTasks.toString()} sub="quests running" color="text-warning" />
+            <ForgeStat label="Fallen" value={errorAgents.length.toString()} sub="need revival" color="text-danger" />
+            <ForgeStat label="Dormant" value={offlineAgents.length.toString()} sub="in slumber" color="text-muted" />
           </div>
         </>
       )}
@@ -273,7 +278,6 @@ export default function FactoryPage() {
   );
 }
 
-/** Calculate position of agent node in a circle around center */
 function getNodePosition(index: number, total: number) {
   const radius = 32;
   const angle = (index / total) * Math.PI * 2 - Math.PI / 2;
@@ -285,10 +289,10 @@ function getNodePosition(index: number, total: number) {
 
 function StatusIndicator({ status }: { status: string }) {
   const cfg: Record<string, { label: string; color: string; bg: string }> = {
-    online: { label: "Activo", color: "text-success", bg: "bg-success/10 border-success/20" },
-    busy: { label: "Trabajando", color: "text-warning", bg: "bg-warning/10 border-warning/20" },
-    error: { label: "Error", color: "text-danger", bg: "bg-danger/10 border-danger/20" },
-    offline: { label: "Offline", color: "text-muted", bg: "bg-muted/10 border-muted/20" },
+    online: { label: "Ascended", color: "text-success", bg: "bg-success/10 border-success/20" },
+    busy: { label: "Forging", color: "text-warning", bg: "bg-warning/10 border-warning/20" },
+    error: { label: "Fallen", color: "text-danger", bg: "bg-danger/10 border-danger/20" },
+    offline: { label: "Dormant", color: "text-muted", bg: "bg-muted/10 border-muted/20" },
   };
   const c = cfg[status] || cfg.offline;
   return (
@@ -301,24 +305,22 @@ function StatusIndicator({ status }: { status: string }) {
 
 function MiniStat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="bg-surface/80 rounded-xl p-2">
+    <div className="bg-surface/80 rounded-xl p-2 border border-gold/[0.04]">
       <p className="text-[9px] text-muted uppercase tracking-wider">{label}</p>
       <p className={`text-sm font-mono font-bold ${color}`}>{value}</p>
     </div>
   );
 }
 
-function FactoryStat({ label, value, sub, icon, color }: { label: string; value: string; sub: string; icon: string; color: string }) {
+function ForgeStat({ label, value, sub, color }: { label: string; value: string; sub: string; color: string }) {
   return (
-    <div className="glass-card rounded-2xl p-3 sm:p-4">
-      <div className="flex items-center gap-2 mb-2">
-        <svg className={`w-4 h-4 ${color} opacity-60`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
-        </svg>
-        <span className="text-[10px] text-muted uppercase tracking-wider font-medium">{label}</span>
+    <div className="glass-card rounded-2xl p-3 sm:p-4 relative overflow-hidden">
+      <div className="absolute inset-0 torch-glow pointer-events-none opacity-50" />
+      <div className="relative">
+        <span className="text-[10px] text-muted uppercase tracking-[0.15em] font-medium">{label}</span>
+        <p className={`text-xl sm:text-2xl font-mono font-bold ${color} mt-1`}>{value}</p>
+        <p className="text-[10px] text-muted mt-0.5 italic">{sub}</p>
       </div>
-      <p className={`text-xl sm:text-2xl font-mono font-bold ${color}`}>{value}</p>
-      <p className="text-[10px] text-muted mt-0.5">{sub}</p>
     </div>
   );
 }
